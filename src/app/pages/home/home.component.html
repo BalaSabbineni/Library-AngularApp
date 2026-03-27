@@ -1,53 +1,33 @@
 <div class="home-page">
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-content">
-      <p class="eyebrow label">Your Digital Library</p>
-      <h1 class="hero-title display-xl">Stories that<br><span class="accent-text">move you</span></h1>
-      <p class="hero-sub body-lg">
-        Discover thousands of books. Purchase instantly. Read anywhere — no shipping required.
-      </p>
-      <div class="hero-actions">
-        <button class="btn-primary" (click)="loadBooks()">Browse Catalog</button>
-        @if (!authService.isLoggedIn()) {
-          <span class="hero-cta-note text-muted">
-            Already a member? Your library awaits.
-          </span>
-        }
-      </div>
-    </div>
-    <div class="hero-visual" aria-hidden="true">
-      <div class="book-stack">
-        <div class="book-spine spine-1"></div>
-        <div class="book-spine spine-2"></div>
-        <div class="book-spine spine-3"></div>
-        <div class="book-spine spine-4"></div>
-        <div class="book-spine spine-5"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Search & Filter -->
-  <section class="search-section">
-    <div class="search-bar">
-      <input
-        class="field-input search-field"
-        type="text"
-        [value]="searchTerm()"
-        (input)="searchTerm.set($any($event.target).value)"
-        (keyup.enter)="onSearch()"
-        placeholder="Search by title, author, ISBN, or category…"
-        aria-label="Search books"
-      />
-      <button class="btn-primary" (click)="onSearch()">Search</button>
-    </div>
+  <!-- Filter Bar -->
+  <div class="filter-bar">
     <div class="shelves">
-      @for (shelf of shelves; track shelf) {
+      @for (shelf of visibleShelves; track shelf) {
         <button class="shelf-chip" (click)="searchTerm.set(shelf); onSearch()">{{ shelf }}</button>
       }
+      @if (overflowShelves.length > 0) {
+        <div class="more-wrap">
+          <button class="shelf-chip more-chip" (click)="showMoreShelves.set(!showMoreShelves())">
+            + {{ overflowShelves.length }} More
+          </button>
+          @if (showMoreShelves()) {
+            <div class="more-backdrop" (click)="showMoreShelves.set(false)"></div>
+            <div class="more-dropdown">
+              @for (shelf of overflowShelves; track shelf) {
+                <button class="more-item" (click)="searchTerm.set(shelf); onSearch(); showMoreShelves.set(false)">
+                  {{ shelf }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
     </div>
-  </section>
+    @if (canUploadBooks()) {
+      <button class="btn-primary upload-trigger-btn" (click)="showUploadModal.set(true)">+ Upload Book</button>
+    }
+  </div>
 
   <!-- Status Messages -->
   @if (statusMessage()) {
@@ -55,39 +35,6 @@
   }
   @if (errorMessage()) {
     <div class="message message--error" role="alert">{{ errorMessage() }}</div>
-  }
-
-  <!-- Admin Upload Form -->
-  @if (canUploadBooks()) {
-    <section class="admin-upload surface">
-      <h2 class="section-heading">Upload Book</h2>
-      <div class="upload-grid">
-        <label class="field-label">Title <input class="field-input" [(ngModel)]="uploadForm.name" type="text" /></label>
-        <label class="field-label">Author <input class="field-input" [(ngModel)]="uploadForm.author" type="text" /></label>
-        <label class="field-label">ISBN <input class="field-input" [(ngModel)]="uploadForm.isbn" type="text" /></label>
-        <label class="field-label">Publisher <input class="field-input" [(ngModel)]="uploadForm.publisher" type="text" /></label>
-        <label class="field-label">Published Date <input class="field-input" [(ngModel)]="uploadForm.publishedDate" type="date" /></label>
-        <label class="field-label">Category <input class="field-input" [(ngModel)]="uploadForm.category" type="text" /></label>
-        <label class="field-label">Language <input class="field-input" [(ngModel)]="uploadForm.language" type="text" /></label>
-        <label class="field-label">Pages <input class="field-input" [(ngModel)]="uploadForm.pageCount" type="number" min="1" /></label>
-        <label class="field-label">Price ($) <input class="field-input" [(ngModel)]="uploadForm.price" type="number" step="0.01" min="0" /></label>
-        <label class="field-label">Currency <input class="field-input" [(ngModel)]="uploadForm.currency" type="text" maxlength="3" /></label>
-        <label class="field-label">Storage
-          <select class="field-input" [(ngModel)]="uploadForm.pdfStorageType">
-            <option value="DATABASE_BLOB">DATABASE_BLOB</option>
-            <option value="FILE_SYSTEM">FILE_SYSTEM</option>
-            <option value="OBJECT_STORAGE">OBJECT_STORAGE</option>
-          </select>
-        </label>
-        <label class="field-label">PDF File <input type="file" accept="application/pdf" (change)="onPdfSelected($event)" /></label>
-      </div>
-      <label class="field-label" style="margin-top:10px">Description
-        <input class="field-input" [(ngModel)]="uploadForm.description" type="text" />
-      </label>
-      <button class="btn-primary upload-btn" [disabled]="uploadingBook()" (click)="uploadBook()">
-        @if (uploadingBook()) { <span class="spinner"></span> Uploading… } @else { Upload Book PDF }
-      </button>
-    </section>
   }
 
   <!-- Book Grid -->
@@ -193,6 +140,48 @@
   }
 
 </div>
+
+<!-- Upload Book Modal -->
+@if (showUploadModal()) {
+  <div class="pdf-backdrop" (click)="showUploadModal.set(false)" role="presentation"></div>
+  <div class="upload-modal" role="dialog" aria-modal="true" aria-label="Upload Book">
+    <div class="upload-modal-header">
+      <h2 class="heading-md">Upload Book</h2>
+      <button class="btn-ghost" (click)="showUploadModal.set(false)" aria-label="Close">✕</button>
+    </div>
+    <div class="upload-modal-body">
+      <div class="upload-grid">
+        <label class="field-label">Title <input class="field-input" [(ngModel)]="uploadForm.name" type="text" /></label>
+        <label class="field-label">Author <input class="field-input" [(ngModel)]="uploadForm.author" type="text" /></label>
+        <label class="field-label">ISBN <input class="field-input" [(ngModel)]="uploadForm.isbn" type="text" /></label>
+        <label class="field-label">Publisher <input class="field-input" [(ngModel)]="uploadForm.publisher" type="text" /></label>
+        <label class="field-label">Published Date <input class="field-input" [(ngModel)]="uploadForm.publishedDate" type="date" /></label>
+        <label class="field-label">Category <input class="field-input" [(ngModel)]="uploadForm.category" type="text" /></label>
+        <label class="field-label">Language <input class="field-input" [(ngModel)]="uploadForm.language" type="text" /></label>
+        <label class="field-label">Pages <input class="field-input" [(ngModel)]="uploadForm.pageCount" type="number" min="1" /></label>
+        <label class="field-label">Price ($) <input class="field-input" [(ngModel)]="uploadForm.price" type="number" step="0.01" min="0" /></label>
+        <label class="field-label">Currency <input class="field-input" [(ngModel)]="uploadForm.currency" type="text" maxlength="3" /></label>
+        <label class="field-label">Storage
+          <select class="field-input" [(ngModel)]="uploadForm.pdfStorageType">
+            <option value="DATABASE_BLOB">DATABASE_BLOB</option>
+            <option value="FILE_SYSTEM">FILE_SYSTEM</option>
+            <option value="OBJECT_STORAGE">OBJECT_STORAGE</option>
+          </select>
+        </label>
+        <label class="field-label">PDF File <input type="file" accept="application/pdf" (change)="onPdfSelected($event)" /></label>
+      </div>
+      <label class="field-label" style="margin-top:10px">Description
+        <input class="field-input" [(ngModel)]="uploadForm.description" type="text" />
+      </label>
+      <div class="upload-modal-footer">
+        <button class="btn-ghost" (click)="showUploadModal.set(false)">Cancel</button>
+        <button class="btn-primary" [disabled]="uploadingBook()" (click)="uploadBook()">
+          @if (uploadingBook()) { <span class="spinner"></span> Uploading… } @else { Upload Book PDF }
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- PDF Reader Modal -->
 @if (showPdfReader()) {

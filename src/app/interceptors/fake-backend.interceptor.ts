@@ -23,8 +23,10 @@ const MOCK_USERS: MockUser[] = [
   { id: 'u001', name: 'Alice Chen',  email: 'alice@example.com',    password: 'user123',  role: 'USER' },
   { id: 'u002', name: 'Demo User',   email: 'user@bookshop.local',  password: 'user123',  role: 'USER' },
   { id: 'a001', name: 'Bob Admin',   email: 'bob@admin.com',        password: 'admin123', role: 'ADMIN' },
+  { id: 'a003', name: 'Admin',       email: 'admin@gmail.com',      password: 'admin',    role: 'ADMIN' },
   { id: 'a002', name: 'Demo Admin',  email: 'admin@elibrary.com',   password: 'admin123', role: 'ADMIN' },
-  { id: 'sa01', name: 'Root Admin',  email: 'root@elibrary.com',    password: 'root123',  role: 'SUPERADMIN' },
+  { id: 'sa01', name: 'Root Admin',  email: 'root@elibrary.com',    password: 'root123',     role: 'SUPERADMIN' },
+  { id: 'sa02', name: 'Super Admin', email: 'superadmin@gmail.com', password: 'superadmin',  role: 'SUPERADMIN' },
 ];
 
 // ─── Cart state ───
@@ -154,6 +156,27 @@ export const fakeBackendInterceptor: HttpInterceptorFn = (
 
     cartState = { items: [], subtotal: 0 };
     return makeResponse(response, 201);
+  }
+
+  // ─── Mock: GET /superadmin/admins ───
+  if (req.method === 'GET' && isUrl(req, ApiEndpoints.superadminAdmins)) {
+    if (!hasAuth(req)) return unauthorized();
+    const admins = MOCK_USERS
+      .filter(u => u.role === 'ADMIN' || u.role === 'SUPERADMIN')
+      .map(({ id, name, email, role }) => ({ id, name, email, role }));
+    return makeResponse(admins);
+  }
+
+  // ─── Mock: POST /superadmin/admins ───
+  if (req.method === 'POST' && isUrl(req, ApiEndpoints.superadminAdmins)) {
+    if (!hasAuth(req)) return unauthorized();
+    const { name, email, password, role } = req.body as { name: string; email: string; password: string; role: UserRole };
+    if (MOCK_USERS.find(u => u.email === email)) {
+      return badRequest('Email already in use.');
+    }
+    const newAdmin: MockUser = { id: `a${Date.now()}`, name, email, password, role: role || 'ADMIN' };
+    MOCK_USERS.push(newAdmin);
+    return makeResponse({ id: newAdmin.id, name, email, role: newAdmin.role }, 201);
   }
 
   return next(req);

@@ -8,5 +8,6 @@ export const ApiEndpoints = {
   books: `${base}/books`,
   cart: `${base}/cart`,
   cartItems: `${base}/cart/items`,
-  checkout: `${base}/orders/checkout`
+  checkout: `${base}/orders/checkout`,
+  superadminAdmins: `${base}/superadmin/admins`
 };

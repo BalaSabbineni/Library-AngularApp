@@ -6,16 +6,14 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const token = authService.token();
 
-  if (!token) {
-    return next(req);
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': 'true'
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['X-User-Role'] = authService.user()?.role || '';
   }
 
-  return next(
-    req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`,
-        'X-User-Role': authService.user()?.role || ''
-      }
-    })
-  );
+  return next(req.clone({ setHeaders: headers }));
 };

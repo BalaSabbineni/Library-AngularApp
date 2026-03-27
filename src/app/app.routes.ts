@@ -10,6 +10,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
   },
   {
+    path: 'superadmin',
+    loadComponent: () => import('./pages/superadmin/superadmin.component').then(m => m.SuperadminComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }

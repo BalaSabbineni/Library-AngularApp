@@ -29,6 +29,8 @@
       @if (authService.isLoggedIn()) {
         <span class="user-name">{{ authService.user()?.name }}</span>
 
+        <a routerLink="/user/purchases" class="btn-ghost">Your Books</a>
+
         @if (isAdmin) {
           <a routerLink="/admin" class="btn-ghost admin-link">Admin Panel</a>
         }
@@ -56,17 +58,6 @@
 
   </div>
 
-  <!-- Category Nav -->
-  <nav class="category-nav" aria-label="Book categories">
-    <a routerLink="/books" [queryParams]="{category: 'fiction'}">Fiction</a>
-    <a routerLink="/books" [queryParams]="{category: 'non-fiction'}">Non-Fiction</a>
-    <a routerLink="/books" [queryParams]="{category: 'science'}">Science</a>
-    <a routerLink="/books" [queryParams]="{category: 'history'}">History</a>
-    <a routerLink="/books" [queryParams]="{category: 'self-help'}">Self-Help</a>
-    <a routerLink="/books" [queryParams]="{category: 'mystery'}">Mystery</a>
-    <a routerLink="/books" [queryParams]="{category: 'ebooks'}">E-Books</a>
-    <a routerLink="/books" [queryParams]="{category: 'new'}">New Releases</a>
-  </nav>
 </header>
 
 <!-- Auth Modal -->

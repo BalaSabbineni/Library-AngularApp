@@ -1,10 +1,10 @@
 .home-page {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0 24px 60px;
+  padding: 12px 24px 60px;
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 20px;
 }
 
 /* ─── Hero ─── */
@@ -97,6 +97,57 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  flex: 1;
+  align-items: center;
+}
+
+/* More dropdown */
+.more-wrap {
+  position: relative;
+}
+
+.more-chip {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.more-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 11;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.more-item {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition), color var(--transition);
+  cursor: pointer;
+}
+
+.more-item:hover {
+  background: var(--color-surface-2);
+  color: var(--color-accent);
 }
 
 .shelf-chip {
@@ -136,9 +187,59 @@
   border: 1px solid rgba(224, 82, 82, 0.3);
 }
 
-/* ─── Admin Upload ─── */
-.admin-upload {
-  padding: 28px;
+/* ─── Filter Bar ─── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-trigger-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ─── Upload Modal ─── */
+.upload-modal {
+  position: fixed;
+  z-index: 301;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94vw, 760px);
+  max-height: 90vh;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.upload-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.upload-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.upload-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .upload-grid {
@@ -146,10 +247,6 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
   margin-bottom: 14px;
-}
-
-.upload-btn {
-  margin-top: 16px;
 }
 
 /* ─── Catalog ─── */

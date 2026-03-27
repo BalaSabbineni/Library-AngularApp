@@ -1,0 +1,110 @@
+<div class="sa-page">
+
+  <div class="sa-header">
+    <div>
+      <h1 class="display-lg">Super Admin Panel</h1>
+      <p class="text-muted body-sm">Manage admin accounts for your organisation.</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateModal()">+ Create Admin Account</button>
+  </div>
+
+  @if (successMessage()) {
+    <div class="message message--success" role="status">{{ successMessage() }}</div>
+  }
+  @if (errorMessage()) {
+    <div class="message message--error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <!-- Admins Table -->
+  <div class="surface sa-table-wrap">
+    <table class="sa-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          @for (n of [1,2,3]; track n) {
+            <tr>
+              <td><div class="skeleton-line"></div></td>
+              <td><div class="skeleton-line"></div></td>
+              <td><div class="skeleton-line short"></div></td>
+            </tr>
+          }
+        } @else if (admins().length === 0) {
+          <tr>
+            <td colspan="3" class="empty-cell text-muted">No admin accounts found.</td>
+          </tr>
+        } @else {
+          @for (admin of admins(); track admin.id) {
+            <tr>
+              <td>{{ admin.name }}</td>
+              <td class="text-muted">{{ admin.email }}</td>
+              <td>
+                <span class="role-badge" [class.role-super]="admin.role === 'SUPERADMIN'">
+                  {{ admin.role }}
+                </span>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Create Admin Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="showCreateModal.set(false)" role="presentation"></div>
+  <div class="create-modal" role="dialog" aria-modal="true" aria-label="Create Admin Account">
+    <div class="create-modal-header">
+      <h2 class="heading-md">Create Admin Account</h2>
+      <button class="btn-ghost modal-close-btn" (click)="showCreateModal.set(false)" aria-label="Close">✕</button>
+    </div>
+
+    <div class="create-modal-body">
+      <label class="field-label">
+        Full Name *
+        <input class="field-input" type="text" [(ngModel)]="createForm.name" placeholder="Jane Doe" />
+      </label>
+      <label class="field-label">
+        Email *
+        <input class="field-input" type="email" [(ngModel)]="createForm.email" placeholder="jane@company.com" />
+      </label>
+      <label class="field-label">
+        Password *
+        <input class="field-input" type="text" [(ngModel)]="createForm.password" [disabled]="createForm.autoGenPassword" placeholder="••••••••" />
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" [(ngModel)]="createForm.autoGenPassword" (change)="toggleAutoGen()" />
+        Auto-generate password
+      </label>
+      <label class="field-label">
+        Role
+        <select class="field-input" [(ngModel)]="createForm.role">
+          <option value="ADMIN">Admin</option>
+          <option value="SUPERADMIN">Super Admin</option>
+        </select>
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" [(ngModel)]="createForm.sendWelcomeEmail" />
+        Send welcome email
+      </label>
+
+      @if (formError()) {
+        <p class="form-error" role="alert">{{ formError() }}</p>
+      }
+    </div>
+
+    <div class="create-modal-footer">
+      <button class="btn-ghost" (click)="showCreateModal.set(false)">Cancel</button>
+      <button class="btn-primary" [disabled]="creating()" (click)="createAdmin()">
+        @if (creating()) { <span class="spinner"></span> Creating… } @else { Create Account }
+      </button>
+    </div>
+  </div>
+}

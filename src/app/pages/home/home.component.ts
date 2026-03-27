@@ -23,7 +23,7 @@ export class HomeComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly shelves = ['Bestsellers', 'Staff Picks', 'New Releases', 'Award Winners', 'Kids & YA', 'Indie Press'];
+  readonly shelves = ['Bestsellers', 'Fiction', 'Romance', 'Tech', 'Science', 'History', 'Self-Help', 'Mystery', 'Biography', 'Kids & YA'];
 
   searchTerm = signal('');
   books = signal<Book[]>([]);
@@ -39,6 +39,13 @@ export class HomeComponent implements OnInit {
   loadingPdf = signal(false);
   pdfReaderError = signal('');
   private selectedPdfObjectUrl: string | null = null;
+
+  showUploadModal = signal(false);
+  showMoreShelves = signal(false);
+  readonly visibleShelvesCount = 6;
+
+  get visibleShelves() { return this.shelves.slice(0, this.visibleShelvesCount); }
+  get overflowShelves() { return this.shelves.slice(this.visibleShelvesCount); }
 
   // Admin upload form
   uploadForm = {
@@ -155,6 +162,7 @@ export class HomeComponent implements OnInit {
     this.booksService.uploadBook(payload).subscribe({
       next: () => {
         this.uploadingBook.set(false);
+        this.showUploadModal.set(false);
         this.statusMessage.set('Book uploaded successfully.');
         this.uploadPdfFile = null;
         this.loadBooks(this.searchTerm());
