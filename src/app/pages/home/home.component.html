@@ -3,8 +3,9 @@
   <!-- Filter Bar -->
   <div class="filter-bar">
     <div class="shelves">
+      <button class="shelf-chip" [class.shelf-chip--active]="activeShelf() === ''" (click)="clearShelf()">All</button>
       @for (shelf of visibleShelves; track shelf) {
-        <button class="shelf-chip" (click)="searchTerm.set(shelf); onSearch()">{{ shelf }}</button>
+        <button class="shelf-chip" [class.shelf-chip--active]="activeShelf() === shelf" (click)="selectShelf(shelf)">{{ shelf }}</button>
       }
       @if (overflowShelves.length > 0) {
         <div class="more-wrap">
@@ -15,7 +16,7 @@
             <div class="more-backdrop" (click)="showMoreShelves.set(false)"></div>
             <div class="more-dropdown">
               @for (shelf of overflowShelves; track shelf) {
-                <button class="more-item" (click)="searchTerm.set(shelf); onSearch(); showMoreShelves.set(false)">
+                <button class="more-item" [class.more-item--active]="activeShelf() === shelf" (click)="selectShelf(shelf)">
                   {{ shelf }}
                 </button>
               }
@@ -25,7 +26,7 @@
       }
     </div>
     @if (canUploadBooks()) {
-      <button class="btn-primary upload-trigger-btn" (click)="showUploadModal.set(true)">+ Upload Book</button>
+      <button class="btn-primary upload-trigger-btn" (click)="showUploadModal.set(true); uploadModalStatus.set(null)">+ Upload Book</button>
     }
   </div>
 
@@ -82,6 +83,13 @@
                 </div>
               }
               <span class="category-badge">{{ book.category }}</span>
+              @if (canUploadBooks()) {
+                <button class="delete-book-btn" (click)="openDeleteModal(book)" aria-label="Delete book" title="Delete book">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+              }
             </div>
             <div class="card-body">
               <h3 class="book-title">{{ book.title }}</h3>
@@ -173,12 +181,59 @@
       <label class="field-label" style="margin-top:10px">Description
         <input class="field-input" [(ngModel)]="uploadForm.description" type="text" />
       </label>
+      @if (uploadModalStatus()) {
+        <div class="upload-status" [class.upload-status--success]="uploadModalStatus()!.type === 'success'" [class.upload-status--error]="uploadModalStatus()!.type === 'error'">
+          {{ uploadModalStatus()!.text }}
+        </div>
+      }
+
       <div class="upload-modal-footer">
         <button class="btn-ghost" (click)="showUploadModal.set(false)">Cancel</button>
         <button class="btn-primary" [disabled]="uploadingBook()" (click)="uploadBook()">
           @if (uploadingBook()) { <span class="spinner"></span> Uploading… } @else { Upload Book PDF }
         </button>
       </div>
+    </div>
+  </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (deleteTarget()) {
+  <div class="pdf-backdrop" (click)="deleteTarget.set(null)" role="presentation"></div>
+  <div class="delete-modal" role="dialog" aria-modal="true" aria-label="Confirm delete">
+    <div class="delete-modal-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <h2 class="heading-md">Delete Book</h2>
+    <p class="text-muted body-sm">
+      You are about to delete <strong class="delete-book-name">{{ deleteTarget()!.title }}</strong>.<br/>
+      This action cannot be undone.
+    </p>
+    <label class="field-label delete-confirm-label">
+      Type <strong>delete</strong> to confirm
+      <input
+        class="field-input"
+        type="text"
+        [ngModel]="deleteConfirmText()"
+        (ngModelChange)="deleteConfirmText.set($event)"
+        placeholder="delete"
+        autocomplete="off"
+      />
+    </label>
+    @if (errorMessage()) {
+      <p class="delete-error" role="alert">{{ errorMessage() }}</p>
+    }
+    <div class="delete-modal-footer">
+      <button class="btn-ghost" (click)="deleteTarget.set(null)">Cancel</button>
+      <button
+        class="btn-danger"
+        [disabled]="deleteConfirmText().toLowerCase() !== 'delete' || deleting()"
+        (click)="confirmDelete()"
+      >
+        @if (deleting()) { <span class="spinner"></span> Deleting… } @else { Delete Book }
+      </button>
     </div>
   </div>
 }

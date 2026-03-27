@@ -41,11 +41,31 @@ export class HomeComponent implements OnInit {
   private selectedPdfObjectUrl: string | null = null;
 
   showUploadModal = signal(false);
+  uploadModalStatus = signal<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  deleteTarget = signal<{ id: string; title: string } | null>(null);
+  deleteConfirmText = signal('');
+  deleting = signal(false);
   showMoreShelves = signal(false);
+  activeShelf = signal('');
   readonly visibleShelvesCount = 6;
 
   get visibleShelves() { return this.shelves.slice(0, this.visibleShelvesCount); }
   get overflowShelves() { return this.shelves.slice(this.visibleShelvesCount); }
+
+  selectShelf(shelf: string) {
+    const next = this.activeShelf() === shelf ? '' : shelf;
+    this.activeShelf.set(next);
+    this.searchTerm.set(next);
+    this.onSearch();
+    this.showMoreShelves.set(false);
+  }
+
+  clearShelf() {
+    this.activeShelf.set('');
+    this.searchTerm.set('');
+    this.onSearch();
+  }
 
   // Admin upload form
   uploadForm = {
@@ -100,7 +120,7 @@ export class HomeComponent implements OnInit {
       },
       error: (err) => {
         this.loadingBooks.set(false);
-        this.errorMessage.set(err?.error?.message || 'Failed to load books.');
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Failed to load books.');
       }
     });
   }
@@ -118,7 +138,7 @@ export class HomeComponent implements OnInit {
         setTimeout(() => this.statusMessage.set(''), 2500);
       },
       error: (err) => {
-        this.errorMessage.set(err?.error?.message || 'Unable to add to cart.');
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Unable to add to cart.');
       }
     });
   }
@@ -135,7 +155,32 @@ export class HomeComponent implements OnInit {
       },
       error: (err) => {
         this.checkingOut.set(false);
-        this.errorMessage.set(err?.error?.message || 'Checkout failed.');
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Checkout failed.');
+      }
+    });
+  }
+
+  openDeleteModal(book: { id: string; title: string }) {
+    this.deleteTarget.set(book);
+    this.deleteConfirmText.set('');
+  }
+
+  confirmDelete() {
+    const target = this.deleteTarget();
+    if (!target || this.deleteConfirmText().toLowerCase() !== 'delete') return;
+    this.deleting.set(true);
+
+    this.booksService.deleteBook(target.id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.deleteTarget.set(null);
+        this.books.update(list => list.filter(b => b.id !== target.id));
+        this.statusMessage.set(`"${target.title}" deleted.`);
+        setTimeout(() => this.statusMessage.set(''), 3000);
+      },
+      error: (err) => {
+        this.deleting.set(false);
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Delete failed.');
       }
     });
   }
@@ -152,24 +197,25 @@ export class HomeComponent implements OnInit {
 
   uploadBook() {
     if (!this.uploadPdfFile) {
-      this.errorMessage.set('Please select a PDF file.');
+      this.uploadModalStatus.set({ type: 'error', text: 'Please select a PDF file.' });
       return;
     }
-    this.clearMessages();
+    this.uploadModalStatus.set(null);
     this.uploadingBook.set(true);
 
     const payload: UploadBookRequest = { ...this.uploadForm, pdfFile: this.uploadPdfFile };
     this.booksService.uploadBook(payload).subscribe({
       next: () => {
         this.uploadingBook.set(false);
-        this.showUploadModal.set(false);
-        this.statusMessage.set('Book uploaded successfully.');
+        this.uploadModalStatus.set({ type: 'success', text: 'Book uploaded successfully!' });
         this.uploadPdfFile = null;
         this.loadBooks(this.searchTerm());
+        setTimeout(() => this.showUploadModal.set(false), 1800);
       },
       error: (err) => {
         this.uploadingBook.set(false);
-        this.errorMessage.set(err?.error?.message || 'Upload failed.');
+        const msg = err?.error?.error?.message || err?.error?.message || 'Upload failed. Please try again.';
+        this.uploadModalStatus.set({ type: 'error', text: msg });
       }
     });
   }
@@ -190,7 +236,7 @@ export class HomeComponent implements OnInit {
         this.loadingPdf.set(false);
         const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
         this.selectedPdfObjectUrl = URL.createObjectURL(pdfBlob);
-        this.selectedPdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.selectedPdfObjectUrl));
+        this.selectedPdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.selectedPdfObjectUrl + '#toolbar=0&navpanes=0'));
       },
       error: () => {
         this.loadingPdf.set(false);

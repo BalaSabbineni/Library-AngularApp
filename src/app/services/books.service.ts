@@ -54,7 +54,13 @@ export class BooksService {
     formData.append('pdfStorageType', payload.pdfStorageType);
     formData.append('pdfFile', payload.pdfFile);
 
-    return this.http.post<ApiResponse<BackendBook>>(ApiEndpoints.books, formData).pipe(map((response) => this.mapBook(response.data)));
+    return this.http.post<ApiResponse<BackendBook> | BackendBook>(ApiEndpoints.books, formData).pipe(
+      map((response) => this.mapBook('data' in response ? response.data : response))
+    );
+  }
+
+  deleteBook(bookId: string) {
+    return this.http.delete(`${ApiEndpoints.books}/${bookId}`);
   }
 
   getPdfBlob(bookId: string) {
