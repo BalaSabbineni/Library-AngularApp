@@ -1,0 +1,187 @@
+<header class="navbar">
+  <div class="navbar-inner">
+
+    <!-- Brand -->
+    <a routerLink="/" class="brand">
+      <span class="brand-mark">📚</span>
+      <span class="brand-name">E-Library</span>
+    </a>
+
+    <!-- Search -->
+    <div class="search-pill">
+      <input
+        class="search-input"
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search books, authors…"
+        (keyup.enter)="onSearch()"
+        aria-label="Search books"
+      />
+      <button class="search-btn" (click)="onSearch()" aria-label="Submit search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="nav-actions">
+      @if (authService.isLoggedIn()) {
+        <span class="user-name">{{ authService.user()?.name }}</span>
+
+        @if (isAdmin) {
+          <a routerLink="/admin" class="btn-ghost admin-link">Admin Panel</a>
+        }
+        @if (isSuperAdmin) {
+          <a routerLink="/superadmin" class="btn-ghost superadmin-link">Super Admin</a>
+        }
+
+        <button class="cart-btn" routerLink="/user/cart" aria-label="Cart">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          @if (cartCount > 0) {
+            <span class="cart-badge">{{ cartCount }}</span>
+          }
+        </button>
+
+        <button class="btn-ghost sign-out-btn" (click)="signOut()">Sign Out</button>
+      } @else {
+        <button class="btn-ghost" (click)="openAuthModal('login')">Sign In</button>
+        <button class="btn-primary" (click)="openAuthModal('register')">Register</button>
+      }
+    </div>
+
+  </div>
+
+  <!-- Category Nav -->
+  <nav class="category-nav" aria-label="Book categories">
+    <a routerLink="/books" [queryParams]="{category: 'fiction'}">Fiction</a>
+    <a routerLink="/books" [queryParams]="{category: 'non-fiction'}">Non-Fiction</a>
+    <a routerLink="/books" [queryParams]="{category: 'science'}">Science</a>
+    <a routerLink="/books" [queryParams]="{category: 'history'}">History</a>
+    <a routerLink="/books" [queryParams]="{category: 'self-help'}">Self-Help</a>
+    <a routerLink="/books" [queryParams]="{category: 'mystery'}">Mystery</a>
+    <a routerLink="/books" [queryParams]="{category: 'ebooks'}">E-Books</a>
+    <a routerLink="/books" [queryParams]="{category: 'new'}">New Releases</a>
+  </nav>
+</header>
+
+<!-- Auth Modal -->
+@if (showAuthModal()) {
+  <div class="modal-backdrop" (click)="closeAuthModal()" role="presentation"></div>
+
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Authentication">
+    <button class="modal-close" (click)="closeAuthModal()" aria-label="Close">✕</button>
+
+    <div class="auth-tabs">
+      <button
+        [class.active]="authMode() === 'login'"
+        (click)="setAuthMode('login')"
+      >Sign In</button>
+      <button
+        [class.active]="authMode() === 'register'"
+        (click)="setAuthMode('register')"
+      >Register</button>
+    </div>
+
+    @if (authMode() === 'login') {
+      <h2 class="auth-title">Welcome back</h2>
+
+      <div class="auth-fields">
+        <label class="field-label">
+          Email
+          <input
+            class="field-input"
+            type="email"
+            [(ngModel)]="signInForm.email"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
+        </label>
+        <label class="field-label">
+          Password
+          <input
+            class="field-input"
+            type="password"
+            [(ngModel)]="signInForm.password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            (keyup.enter)="signIn()"
+          />
+        </label>
+      </div>
+
+      <button class="btn-primary auth-submit" [disabled]="loadingAuth()" (click)="signIn()">
+        @if (loadingAuth()) {
+          <span class="spinner"></span> Signing in…
+        } @else {
+          Sign In →
+        }
+      </button>
+
+      <p class="auth-footer-text">
+        New here?
+        <button class="btn-link" (click)="setAuthMode('register')">Create account</button>
+      </p>
+    } @else {
+      <h2 class="auth-title">Create account</h2>
+
+      <div class="auth-fields">
+        <label class="field-label">
+          Full Name
+          <input
+            class="field-input"
+            type="text"
+            [(ngModel)]="registerForm.name"
+            placeholder="Jane Doe"
+            autocomplete="name"
+          />
+        </label>
+        <label class="field-label">
+          Email
+          <input
+            class="field-input"
+            type="email"
+            [(ngModel)]="registerForm.email"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
+        </label>
+        <label class="field-label">
+          Password
+          <input
+            class="field-input"
+            type="password"
+            [(ngModel)]="registerForm.password"
+            placeholder="••••••••"
+            autocomplete="new-password"
+            (keyup.enter)="register()"
+          />
+        </label>
+      </div>
+
+      <button class="btn-primary auth-submit" [disabled]="loadingAuth()" (click)="register()">
+        @if (loadingAuth()) {
+          <span class="spinner"></span> Registering…
+        } @else {
+          Create Account →
+        }
+      </button>
+
+      <p class="auth-footer-text">
+        Already have an account?
+        <button class="btn-link" (click)="setAuthMode('login')">Sign in</button>
+      </p>
+    }
+
+    @if (authError()) {
+      <p class="auth-msg auth-msg--error" role="alert">{{ authError() }}</p>
+    }
+    @if (authSuccess()) {
+      <p class="auth-msg auth-msg--success" role="status">{{ authSuccess() }}</p>
+    }
+  </div>
+}

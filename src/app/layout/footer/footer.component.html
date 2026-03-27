@@ -1,0 +1,37 @@
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark">📚</span>
+      <span class="brand-name">E-Library</span>
+      <p class="tagline">Discover, purchase, and read — all in one place.</p>
+    </div>
+
+    <nav class="footer-links" aria-label="Footer navigation">
+      <div class="link-group">
+        <h4>Browse</h4>
+        <a routerLink="/books">All Books</a>
+        <a routerLink="/books" [queryParams]="{category: 'new'}">New Releases</a>
+        <a routerLink="/books" [queryParams]="{category: 'fiction'}">Fiction</a>
+        <a routerLink="/books" [queryParams]="{category: 'non-fiction'}">Non-Fiction</a>
+      </div>
+      <div class="link-group">
+        <h4>Account</h4>
+        <a routerLink="/auth/signup">Register</a>
+        <a routerLink="/auth/login">Sign In</a>
+        <a routerLink="/user/dashboard">My Library</a>
+        <a routerLink="/user/purchases">Purchases</a>
+      </div>
+      <div class="link-group">
+        <h4>Support</h4>
+        <a href="#">Help Center</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="footer-bottom">
+    <p>&copy; {{ year }} E-Library. All rights reserved.</p>
+  </div>
+</footer>

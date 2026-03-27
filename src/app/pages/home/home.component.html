@@ -1,0 +1,215 @@
+<div class="home-page">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <p class="eyebrow label">Your Digital Library</p>
+      <h1 class="hero-title display-xl">Stories that<br><span class="accent-text">move you</span></h1>
+      <p class="hero-sub body-lg">
+        Discover thousands of books. Purchase instantly. Read anywhere — no shipping required.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary" (click)="loadBooks()">Browse Catalog</button>
+        @if (!authService.isLoggedIn()) {
+          <span class="hero-cta-note text-muted">
+            Already a member? Your library awaits.
+          </span>
+        }
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="book-stack">
+        <div class="book-spine spine-1"></div>
+        <div class="book-spine spine-2"></div>
+        <div class="book-spine spine-3"></div>
+        <div class="book-spine spine-4"></div>
+        <div class="book-spine spine-5"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search & Filter -->
+  <section class="search-section">
+    <div class="search-bar">
+      <input
+        class="field-input search-field"
+        type="text"
+        [value]="searchTerm()"
+        (input)="searchTerm.set($any($event.target).value)"
+        (keyup.enter)="onSearch()"
+        placeholder="Search by title, author, ISBN, or category…"
+        aria-label="Search books"
+      />
+      <button class="btn-primary" (click)="onSearch()">Search</button>
+    </div>
+    <div class="shelves">
+      @for (shelf of shelves; track shelf) {
+        <button class="shelf-chip" (click)="searchTerm.set(shelf); onSearch()">{{ shelf }}</button>
+      }
+    </div>
+  </section>
+
+  <!-- Status Messages -->
+  @if (statusMessage()) {
+    <div class="message message--success" role="status">{{ statusMessage() }}</div>
+  }
+  @if (errorMessage()) {
+    <div class="message message--error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <!-- Admin Upload Form -->
+  @if (canUploadBooks()) {
+    <section class="admin-upload surface">
+      <h2 class="section-heading">Upload Book</h2>
+      <div class="upload-grid">
+        <label class="field-label">Title <input class="field-input" [(ngModel)]="uploadForm.name" type="text" /></label>
+        <label class="field-label">Author <input class="field-input" [(ngModel)]="uploadForm.author" type="text" /></label>
+        <label class="field-label">ISBN <input class="field-input" [(ngModel)]="uploadForm.isbn" type="text" /></label>
+        <label class="field-label">Publisher <input class="field-input" [(ngModel)]="uploadForm.publisher" type="text" /></label>
+        <label class="field-label">Published Date <input class="field-input" [(ngModel)]="uploadForm.publishedDate" type="date" /></label>
+        <label class="field-label">Category <input class="field-input" [(ngModel)]="uploadForm.category" type="text" /></label>
+        <label class="field-label">Language <input class="field-input" [(ngModel)]="uploadForm.language" type="text" /></label>
+        <label class="field-label">Pages <input class="field-input" [(ngModel)]="uploadForm.pageCount" type="number" min="1" /></label>
+        <label class="field-label">Price ($) <input class="field-input" [(ngModel)]="uploadForm.price" type="number" step="0.01" min="0" /></label>
+        <label class="field-label">Currency <input class="field-input" [(ngModel)]="uploadForm.currency" type="text" maxlength="3" /></label>
+        <label class="field-label">Storage
+          <select class="field-input" [(ngModel)]="uploadForm.pdfStorageType">
+            <option value="DATABASE_BLOB">DATABASE_BLOB</option>
+            <option value="FILE_SYSTEM">FILE_SYSTEM</option>
+            <option value="OBJECT_STORAGE">OBJECT_STORAGE</option>
+          </select>
+        </label>
+        <label class="field-label">PDF File <input type="file" accept="application/pdf" (change)="onPdfSelected($event)" /></label>
+      </div>
+      <label class="field-label" style="margin-top:10px">Description
+        <input class="field-input" [(ngModel)]="uploadForm.description" type="text" />
+      </label>
+      <button class="btn-primary upload-btn" [disabled]="uploadingBook()" (click)="uploadBook()">
+        @if (uploadingBook()) { <span class="spinner"></span> Uploading… } @else { Upload Book PDF }
+      </button>
+    </section>
+  }
+
+  <!-- Book Grid -->
+  <section class="catalog-section">
+    <div class="section-header">
+      <h2 class="section-heading">
+        @if (searchTerm()) { Results for "{{ searchTerm() }}" } @else { All Books }
+      </h2>
+      <span class="result-count text-muted">
+        @if (!loadingBooks()) { {{ books().length }} books }
+      </span>
+    </div>
+
+    @if (loadingBooks()) {
+      <div class="book-grid skeleton-grid">
+        @for (n of [1,2,3,4,5,6,7,8]; track n) {
+          <div class="book-card skeleton-card">
+            <div class="cover-shell skeleton-cover"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        }
+      </div>
+    } @else if (books().length === 0) {
+      <div class="empty-state">
+        <p class="display-lg">📚</p>
+        <p class="heading-md">No books found</p>
+        <p class="text-muted">Try a different search term.</p>
+      </div>
+    } @else {
+      <div class="book-grid">
+        @for (book of books(); track book.id) {
+          <article class="book-card">
+            <div class="cover-shell">
+              @if (book.coverUrl) {
+                <img
+                  [src]="book.coverUrl"
+                  [alt]="'Cover of ' + book.title + ' by ' + book.author"
+                  class="cover-img"
+                  loading="lazy"
+                />
+              } @else {
+                <div class="cover-fallback" aria-hidden="true">
+                  <span>{{ book.title }}</span>
+                </div>
+              }
+              <span class="category-badge">{{ book.category }}</span>
+            </div>
+            <div class="card-body">
+              <h3 class="book-title">{{ book.title }}</h3>
+              <p class="book-author text-muted">{{ book.author }}</p>
+              <div class="card-footer">
+                <strong class="book-price">${{ book.price.toFixed(2) }}</strong>
+                <div class="card-actions">
+                  <button
+                    class="btn-primary add-cart-btn"
+                    [disabled]="!authService.isLoggedIn()"
+                    (click)="addToCart(book.id, book)"
+                    [title]="authService.isLoggedIn() ? 'Add to cart' : 'Sign in to purchase'"
+                  >Add to Cart</button>
+                  @if (book.pdfDownloadUrl) {
+                    <button class="btn-ghost read-btn" (click)="openPdfReader(book)">Read</button>
+                  }
+                </div>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Cart Summary (inline for Phase 1, will become drawer in Phase 3) -->
+  @if (authService.isLoggedIn() && cart.items.length > 0) {
+    <section class="cart-summary surface">
+      <h2 class="section-heading">My Cart</h2>
+      <ul class="cart-list">
+        @for (item of cart.items; track item.bookId) {
+          <li class="cart-item">
+            <span class="cart-item-title">{{ item.title }}</span>
+            <span class="cart-item-qty text-muted">×{{ item.quantity }}</span>
+            <span class="cart-item-price">${{ (item.quantity * item.unitPrice).toFixed(2) }}</span>
+          </li>
+        }
+      </ul>
+      <div class="cart-footer">
+        <label class="field-label shipping-label">
+          Shipping Address
+          <input class="field-input" [(ngModel)]="shippingAddress" type="text" />
+        </label>
+        <div class="cart-total-row">
+          <strong class="cart-total">Total: ${{ cart.subtotal.toFixed(2) }}</strong>
+          <button
+            class="btn-primary checkout-btn"
+            [disabled]="checkingOut() || !cart.items.length"
+            (click)="checkout()"
+          >
+            @if (checkingOut()) { <span class="spinner"></span> Processing… } @else { Checkout → }
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+
+</div>
+
+<!-- PDF Reader Modal -->
+@if (showPdfReader()) {
+  <div class="pdf-backdrop" (click)="closePdfReader()" role="presentation"></div>
+  <div class="pdf-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Reading: ' + selectedPdfTitle()">
+    <div class="pdf-modal-header">
+      <h3>{{ selectedPdfTitle() }}</h3>
+      <button class="btn-ghost" (click)="closePdfReader()">← Back</button>
+    </div>
+    @if (loadingPdf()) {
+      <div class="pdf-state"><span class="spinner"></span> Loading PDF…</div>
+    }
+    @if (pdfReaderError()) {
+      <div class="pdf-state text-danger">{{ pdfReaderError() }}</div>
+    }
+    @if (selectedPdfUrl() && !loadingPdf() && !pdfReaderError()) {
+      <iframe [src]="selectedPdfUrl()" title="Book PDF Reader" class="pdf-frame"></iframe>
+    }
+  </div>
+}
