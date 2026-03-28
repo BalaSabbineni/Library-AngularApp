@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,6 +7,9 @@ import { Book, UploadBookRequest } from '../../core/models';
 import { AuthService } from '../../services/auth.service';
 import { BooksService } from '../../services/books.service';
 import { CartService } from '../../services/cart.service';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.mjs';
 
 @Component({
   selector: 'app-home',
@@ -15,7 +18,7 @@ import { CartService } from '../../services/cart.service';
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly booksService = inject(BooksService);
   readonly cartService = inject(CartService);
@@ -41,11 +44,28 @@ export class HomeComponent implements OnInit {
   private selectedPdfObjectUrl: string | null = null;
 
   showUploadModal = signal(false);
+  brokenCovers = signal(new Set<string>());
+  bookCovers = signal(new Map<string, string>());
+  private coverObjectUrls: string[] = [];
+
+  onCoverError(bookId: string) {
+    this.brokenCovers.update(s => new Set(s).add(bookId));
+  }
   uploadModalStatus = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
   deleteTarget = signal<{ id: string; title: string } | null>(null);
   deleteConfirmText = signal('');
   deleting = signal(false);
+
+  editTarget = signal<string | null>(null);
+  editForm = {
+    name: '', author: '', isbn: '', publisher: '', publishedDate: '',
+    category: 'General', language: 'English', pageCount: 100, price: 0,
+    currency: 'USD', active: true, inStock: true, description: '',
+    pdfStorageType: 'DATABASE_BLOB' as 'DATABASE_BLOB' | 'FILE_SYSTEM' | 'OBJECT_STORAGE'
+  };
+  editModalStatus = signal<{ type: 'success' | 'error'; text: string } | null>(null);
+  saving = signal(false);
   showMoreShelves = signal(false);
   activeShelf = signal('');
   readonly visibleShelvesCount = 6;
@@ -117,12 +137,55 @@ export class HomeComponent implements OnInit {
       next: (res) => {
         this.books.set(res.items);
         this.loadingBooks.set(false);
+        this.generateCovers(res.items);
       },
       error: (err) => {
         this.loadingBooks.set(false);
         this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Failed to load books.');
       }
     });
+  }
+
+  private generateCovers(books: Book[]) {
+    // Revoke previous covers
+    this.coverObjectUrls.forEach(u => URL.revokeObjectURL(u));
+    this.coverObjectUrls = [];
+    this.bookCovers.set(new Map());
+
+    books.forEach(book => {
+      if (!book.pdfDownloadUrl) return;
+      this.booksService.getPdfBlob(book.id).subscribe({
+        next: async (blob) => {
+          try {
+            const arrayBuffer = await blob.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            const scale = 300 / viewport.width;
+            const scaled = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = scaled.width;
+            canvas.height = scaled.height;
+            const ctx = canvas.getContext('2d')!;
+            await page.render({ canvasContext: ctx, canvas, viewport: scaled }).promise;
+            canvas.toBlob(imgBlob => {
+              if (!imgBlob) return;
+              const url = URL.createObjectURL(imgBlob);
+              this.coverObjectUrls.push(url);
+              this.bookCovers.update(m => new Map(m).set(book.id, url));
+            }, 'image/jpeg', 0.85);
+          } catch {
+            // leave cover as fallback
+          }
+        },
+        error: () => { /* leave cover as fallback */ }
+      });
+    });
+  }
+
+  ngOnDestroy() {
+    this.coverObjectUrls.forEach(u => URL.revokeObjectURL(u));
+    this.releasePdfObjectUrl();
   }
 
   addToCart(bookId: string, book: Book) {
@@ -156,6 +219,48 @@ export class HomeComponent implements OnInit {
       error: (err) => {
         this.checkingOut.set(false);
         this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Checkout failed.');
+      }
+    });
+  }
+
+  openEditModal(book: Book) {
+    this.editTarget.set(book.id);
+    this.editForm = {
+      name: book.title,
+      author: book.author,
+      isbn: book.isbn || '',
+      publisher: '',
+      publishedDate: '',
+      category: book.category,
+      language: 'English',
+      pageCount: 100,
+      price: book.price,
+      currency: 'USD',
+      active: true,
+      inStock: book.inStock,
+      description: book.description,
+      pdfStorageType: 'DATABASE_BLOB'
+    };
+    this.editModalStatus.set(null);
+  }
+
+  saveEdit() {
+    const id = this.editTarget();
+    if (!id) return;
+    this.editModalStatus.set(null);
+    this.saving.set(true);
+
+    this.booksService.updateBook(id, this.editForm).subscribe({
+      next: (updated) => {
+        this.saving.set(false);
+        this.editModalStatus.set({ type: 'success', text: 'Book updated successfully!' });
+        this.books.update(list => list.map(b => b.id === id ? updated : b));
+        setTimeout(() => this.editTarget.set(null), 1500);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        const msg = err?.error?.error?.message || err?.error?.message || 'Update failed. Please try again.';
+        this.editModalStatus.set({ type: 'error', text: msg });
       }
     });
   }

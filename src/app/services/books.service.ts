@@ -10,14 +10,17 @@ export class BooksService {
   constructor(private readonly http: HttpClient) {}
 
   list(search = '') {
-    return this.http.get<PagedBackendResponse>(ApiEndpoints.books).pipe(
-      map((response) => {
-        const mappedItems = response.content
+    return this.http.get<any>(`${ApiEndpoints.books}?page=0&size=100`).pipe(
+      map((raw) => {
+        // Handle both wrapped { data: { content } } and flat { content } responses
+        const response: PagedBackendResponse = raw?.data ?? raw;
+
+        const content: BackendBook[] = response?.content ?? [];
+
+        const mappedItems = content
           .map((book) => this.mapBook(book))
           .filter((book) => {
-            if (!search.trim()) {
-              return true;
-            }
+            if (!search.trim()) return true;
             const term = search.toLowerCase();
             return [book.title, book.author, book.isbn || '', book.category, book.description]
               .join(' ')
@@ -25,11 +28,13 @@ export class BooksService {
               .includes(term);
           });
 
+        // Handle both nested page { page: { number } } and flat { totalElements }
+        const pageInfo = response?.page;
         const payload: BookListResponse = {
           items: mappedItems,
-          page: response.page.number,
-          size: response.page.size,
-          total: response.page.totalElements
+          page: pageInfo?.number ?? (response as any)?.number ?? 0,
+          size: pageInfo?.size ?? (response as any)?.size ?? mappedItems.length,
+          total: pageInfo?.totalElements ?? (response as any)?.totalElements ?? mappedItems.length
         };
         return payload;
       })
@@ -63,6 +68,12 @@ export class BooksService {
     return this.http.delete(`${ApiEndpoints.books}/${bookId}`);
   }
 
+  updateBook(bookId: string, payload: Partial<UploadBookRequest>) {
+    return this.http.put<ApiResponse<BackendBook> | BackendBook>(`${ApiEndpoints.books}/${bookId}`, payload).pipe(
+      map((response) => this.mapBook('data' in response ? response.data : response as BackendBook))
+    );
+  }
+
   getPdfBlob(bookId: string) {
     return this.http.get(`${ApiEndpoints.books}/${bookId}/pdf`, { responseType: 'blob' });
   }
@@ -78,7 +89,7 @@ export class BooksService {
       title: book.name,
       author: book.author,
       isbn: book.isbn,
-      coverUrl: book.isbn ? `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg` : undefined,
+      coverUrl: undefined,
       price: Number(book.price),
       category: book.category,
       description: book.description ?? '',
